@@ -55,11 +55,10 @@ class CPABEUser:
             if pt_gt is False or pt_gt is None:
                 raise PermissionError("Decryption failed: Thuộc tính không thoả mãn Policy!")
                 
-            # Tuỳ theo cách Owner mã hoá, thông thường người ta convert GT Element về bytes.
-            aes_key_bytes = objectToBytes(pt_gt, self.group)
-            
-            # (Hack nhỏ: nếu AES key là string base64 bọc trong objectToBytes, cần làm sạch)
-            # Trong thực tế tuỳ vào cách TV2 pack AES key
+            # Đồng bộ 100% với Owner: Chuyển GT element thành byte rồi băm SHA-256 để ra 32 bytes AES key
+            import hashlib
+            gt_bytes = objectToBytes(pt_gt, self.group)
+            aes_key_bytes = hashlib.sha256(gt_bytes).digest()
             return aes_key_bytes
             
         except PermissionError as pe:

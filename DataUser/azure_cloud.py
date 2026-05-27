@@ -19,9 +19,10 @@ class AzureCloud:
         Nếu offline=True hoặc kết nối lỗi, tự động fallback đọc file cục bộ data/cloud_record_{id}.json
         """
         if not offline:
+            # 1. Thử kết nối sử dụng pyodbc (Nếu đã cấu hình ODBC Driver của Microsoft)
             try:
                 import pyodbc
-                logger.info(f"Đang kết nối Azure SQL Database: {Config.AZURE_SERVER}...")
+                logger.info(f"Đang kết nối Azure SQL Database dùng pyodbc: {Config.AZURE_SERVER}...")
                 conn_str = (
                     f"DRIVER={Config.AZURE_DRIVER};"
                     f"SERVER={Config.AZURE_SERVER};"
@@ -35,12 +36,10 @@ class AzureCloud:
                 conn = pyodbc.connect(conn_str)
                 cursor = conn.cursor()
                 
-                # Lấy tên bảng và cột mặc định (phù hợp với cấu trúc Owner đã mã hoá)
                 table = "records"
                 column = "ciphertext"
                 column_name = f"{table}.{column}"
                 
-                # Truy vấn thực tế tương thích 100% với schema của Owner
                 query = f"""
                     SELECT r.[{column}], k.[cp_abe], k.[public_key]
                     FROM [{table}] r
@@ -51,7 +50,7 @@ class AzureCloud:
                 row = cursor.fetchone()
                 
                 if row:
-                    logger.info("✓ Tải dữ liệu thành công từ Azure SQL Database thực tế.")
+                    logger.info("✓ Tải dữ liệu thành công từ Azure SQL Database thực tế (pyodbc).")
                     return {
                         "ciphertext": row[0],
                         "encrypted_aes_key": row[1],
@@ -59,8 +58,49 @@ class AzureCloud:
                     }
                 else:
                     logger.warning(f"Không tìm thấy bản ghi {record_id} trên Azure SQL.")
-            except Exception as e:
-                logger.warning(f"Lỗi kết nối Azure SQL ({e}). Tự động chuyển sang chế độ offline...")
+            except ImportError:
+                # 2. Khắc phục thông minh: Fallback sang pymssql (Thư viện Python thuần không cần ODBC Driver)
+                try:
+                    import pymssql
+                    logger.info(f"Đang kết nối Azure SQL Database dùng pymssql: {Config.AZURE_SERVER}...")
+                    conn = pymssql.connect(
+                        server=Config.AZURE_SERVER,
+                        user=Config.AZURE_UID,
+                        password=Config.AZURE_PWD,
+                        database=Config.AZURE_DB,
+                        timeout=5
+                    )
+                    cursor = conn.cursor()
+                    
+                    table = "records"
+                    column = "ciphertext"
+                    column_name = f"{table}.{column}"
+                    
+                    # pymssql sử dụng %s làm placeholder thay cho ?
+                    query = f"""
+                        SELECT r.[{column}], k.[cp_abe], k.[public_key]
+                        FROM [{table}] r
+                        CROSS JOIN [manage_key] k
+                        WHERE r.[id] = %s AND k.[column_name] = %s
+                    """
+                    cursor.execute(query, (str(record_id), column_name))
+                    row = cursor.fetchone()
+                    
+                    if row:
+                        logger.info("✓ Tải dữ liệu thành công từ Azure SQL Database thực tế (pymssql).")
+                        return {
+                            "ciphertext": row[0],
+                            "encrypted_aes_key": row[1],
+                            "public_key": row[2]
+                        }
+                    else:
+                        logger.warning(f"Không tìm thấy bản ghi {record_id} trên Azure SQL (pymssql).")
+                except ImportError:
+                    logger.warning("Cảnh báo: Không tìm thấy cả hai thư viện kết nối Database 'pyodbc' và 'pymssql'.")
+                except Exception as e_mssql:
+                    logger.warning(f"Lỗi kết nối Azure SQL qua pymssql: {e_mssql}")
+            except Exception as e_odbc:
+                logger.warning(f"Lỗi kết nối Azure SQL qua pyodbc: {e_odbc}")
 
         # Chế độ Fallback offline
         logger.info(f"Chạy chế độ offline: Đọc bản ghi ID={record_id} từ thư mục data cục bộ...")

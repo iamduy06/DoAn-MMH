@@ -72,9 +72,13 @@ def run_setup():
                 print(f"   ✓ Đã tạo thành công tài khoản mới với mật khẩu: '{DEFAULT_PASSWORD}'")
             except Exception as ex:
                 print(f"   ❌ Không thể tạo tài khoản {email}: {ex}")
+                import traceback
+                traceback.print_exc()
                 continue
         except Exception as e:
-            print(f"   ❌ Lỗi tra cứu tài khoản: {e}")
+            print(f"   ❌ Lỗi tra cứu tài khoản {email}: {e}")
+            import traceback
+            traceback.print_exc()
             continue
 
         # 3. Thiết lập Custom Claims (gán trường role cho ID Token)
@@ -83,7 +87,9 @@ def run_setup():
             print(f"   ✓ Đã thiết lập Custom Claims thành công: {claims} (role = '{role_name}')")
             success_count += 1
         except Exception as e:
-            print(f"   ❌ Lỗi thiết lập Custom Claims: {e}")
+            print(f"   ❌ Lỗi thiết lập Custom Claims cho {email}: {e}")
+            import traceback
+            traceback.print_exc()
 
     print("\n" + "=" * 70)
     print(f"  HOÀN THÀNH! Đã đồng bộ thành công {success_count}/{len(TEST_USERS)} tài khoản kiểm thử.")
