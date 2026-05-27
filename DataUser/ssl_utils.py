@@ -56,11 +56,10 @@ def create_client_ssl_context(
             f"Không tìm thấy chứng chỉ SSL '{ca_cert_path}'."
         )
         
-    # Sử dụng PROTOCOL_TLS để cho phép tắt check_hostname dưới chế độ CERT_REQUIRED của Python
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
-    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-    ctx.load_verify_locations(cafile=ca_cert_path)
+    # Sử dụng create_default_context chuẩn của Python để tương thích 100% mọi phiên bản
+    ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
     ctx.check_hostname = False  # Bỏ qua đối chiếu IP hostname
+    ctx.load_verify_locations(cafile=ca_cert_path)
     ctx.verify_mode    = ssl.CERT_REQUIRED  # Bắt buộc xác thực chứng chỉ thật
     return ctx
 
