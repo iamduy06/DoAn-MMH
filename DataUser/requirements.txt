@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════
+# requirements.txt — Data User (TV3) Module
+# Đồ án CP-ABE EHR System
+# ═══════════════════════════════════════════════════════════
+
+# ── CP-ABE Cryptography ─────────────────────────────────
+# Charm-Crypto: thư viện pairing-based cryptography
+# charm-crypto==0.50
+
+# ── SSL / TLS Certificate Generation ────────────────────
+cryptography>=41.0.0
+
+# ── Utilities ────────────────────────────────────────────
+python-dotenv>=1.0.0
+requests>=2.31.0
+pyodbc>=5.0.0
+
