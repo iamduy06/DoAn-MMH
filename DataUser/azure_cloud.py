@@ -35,14 +35,19 @@ class AzureCloud:
                 conn = pyodbc.connect(conn_str)
                 cursor = conn.cursor()
                 
-                # Truy vấn cơ sở dữ liệu thực tế
-                query = """
-                    SELECT r.Ciphertext, k.Encrypted_AES_Key, k.Public_Key
-                    FROM Records r
-                    JOIN manage_key k ON r.Record_ID = k.Record_ID
-                    WHERE r.Record_ID = ?
+                # Lấy tên bảng và cột mặc định (phù hợp với cấu trúc Owner đã mã hoá)
+                table = "records"
+                column = "ciphertext"
+                column_name = f"{table}.{column}"
+                
+                # Truy vấn thực tế tương thích 100% với schema của Owner
+                query = f"""
+                    SELECT r.[{column}], k.[cp_abe], k.[public_key]
+                    FROM [{table}] r
+                    CROSS JOIN [manage_key] k
+                    WHERE r.[id] = ? AND k.[column_name] = ?
                 """
-                cursor.execute(query, (record_id,))
+                cursor.execute(query, (record_id, column_name))
                 row = cursor.fetchone()
                 
                 if row:

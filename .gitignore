@@ -1,0 +1,22 @@
+# Bỏ qua tất cả các file Markdown (.md) được tạo tự động/báo cáo
+*.md
+**/*.md
+
+# KHÔNG bỏ qua các file tài liệu README.md của dự án
+!README.md
+!**/README.md
+
+# Bỏ qua các file cấu hình và môi trường Python thông thường
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+env/
+venv/
+keys/*.sk
+keys/*.pkl
+logs/
+data/decrypted_*
+data/result_data.txt

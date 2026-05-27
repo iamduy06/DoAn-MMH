@@ -19,7 +19,7 @@ def upload_encrypted_column(table: str, column: str, row_id: int, encrypted_valu
     conn.close()
     print(f"  Uploaded [{table}].[{column}] row {row_id}")
 
-def upload_encrypted_key(column_name: str, cpabe_ciphertext_b64: str, policy: str):
+def upload_encrypted_key(column_name: str, cpabe_ciphertext_b64: str, policy: str, public_key_b64: str):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -29,13 +29,20 @@ def upload_encrypted_key(column_name: str, cpabe_ciphertext_b64: str, policy: st
             column_name NVARCHAR(100),
             cp_abe NVARCHAR(MAX),
             policy NVARCHAR(500),
+            public_key NVARCHAR(MAX),
             created_at DATETIME DEFAULT GETDATE()
         )
     """)
+    # Tự động nâng cấp bảng nếu thiếu cột public_key
+    try:
+        cursor.execute("ALTER TABLE manage_key ADD public_key NVARCHAR(MAX)")
+    except Exception:
+        pass
+
     cursor.execute("DELETE FROM manage_key WHERE column_name = ?", (column_name,))
     cursor.execute(
-        "INSERT INTO manage_key (column_name, cp_abe, policy) VALUES (?, ?, ?)",
-        (column_name, cpabe_ciphertext_b64, policy)
+        "INSERT INTO manage_key (column_name, cp_abe, policy, public_key) VALUES (?, ?, ?, ?)",
+        (column_name, cpabe_ciphertext_b64, policy, public_key_b64)
     )
     conn.commit()
     conn.close()

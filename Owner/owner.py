@@ -23,7 +23,7 @@ from cloud_utils import (
 
 # ========== CONFIG ==========
 TA_HOST = "10.52.210.214"   # Đổi thành IP máy TV1
-TA_PORT = 49999
+TA_PORT = 9999
 BUFFER_SIZE = 4096
 # ============================
 
@@ -110,8 +110,10 @@ def menu_encrypt(pk):
         encrypted = encrypt_aes(plaintext.encode(), aes_key)
         upload_encrypted_column(table, column, row_id, encrypted)
 
-    # Upload CP-ABE ciphertext lên cloud
-    upload_encrypted_key(f"{table}.{column}", ct_b64, policy)
+    # Upload CP-ABE ciphertext kèm Public Key lên cloud để DataUser có thể tải về
+    pk_bytes = objectToBytes(pk, group)
+    pk_b64 = base64.b64encode(pk_bytes).decode('utf-8')
+    upload_encrypted_key(f"{table}.{column}", ct_b64, policy, pk_b64)
 
     print(f"\n  HOÀN THÀNH! Cột [{column}] đã được mã hóa.")
     print(f"  Policy: {policy}")
@@ -183,13 +185,14 @@ def main():
         print(f"  Lỗi đăng nhập: {e}")
         sys.exit(1)
 
-    # Lấy Public Key từ TA
+    # Lấy Public Key từ TA qua đúng giao thức bảo mật của nhóm bằng Firebase Token
     print("\n  Đang kết nối TA...")
     try:
-        pk = get_public_key_from_ta()
+        from ta_client import get_public_key
+        pk = get_public_key(user_info["idToken"])
     except Exception as e:
         print(f"  Không kết nối được TA: {e}")
-        print("  Kiểm tra lại TA_HOST trong owner.py")
+        print("  Kiểm tra lại TA_HOST trong config_owner.py")
         sys.exit(1)
 
     # Menu chính

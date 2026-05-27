@@ -44,4 +44,4 @@ class Config:
     # ──────────────────────────────────────────
     # Pairing group cho Charm-Crypto
     # ──────────────────────────────────────────
-    PAIRING_GROUP = "BN254"
+    PAIRING_GROUP = "SS512"
