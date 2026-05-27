@@ -48,7 +48,7 @@ def ping_ta() -> bool:
     try:
         ctx = _get_ssl_context()
         with socket.create_connection((TA_HOST, TA_PORT), timeout=5) as raw:
-            with ctx.wrap_socket(raw, server_hostname=TA_HOST) as sock:
+            with ctx.wrap_socket(raw, server_hostname=None) as sock:
                 _send_message(sock, {'action': 'ping', 'token': ''})
                 resp = _recv_message(sock)
                 return resp.get('status') == 'ok'
@@ -60,7 +60,7 @@ def get_public_key(id_token: str):
     """Lấy Public Key từ TA"""
     ctx = _get_ssl_context()
     with socket.create_connection((TA_HOST, TA_PORT), timeout=10) as raw:
-        with ctx.wrap_socket(raw, server_hostname=TA_HOST) as sock:
+        with ctx.wrap_socket(raw, server_hostname=None) as sock:
             _send_message(sock, {
                 'action': 'get_pk',
                 'token': id_token
@@ -81,7 +81,7 @@ def get_secret_key(id_token: str, attributes: list):
     attrs_upper = [a.strip().upper() for a in attributes]
     ctx = _get_ssl_context()
     with socket.create_connection((TA_HOST, TA_PORT), timeout=10) as raw:
-        with ctx.wrap_socket(raw, server_hostname=TA_HOST) as sock:
+        with ctx.wrap_socket(raw, server_hostname=None) as sock:
             _send_message(sock, {
                 'action': 'get_sk',
                 'token': id_token,
