@@ -46,7 +46,8 @@ class TAClient:
         ssl_ctx  = create_client_ssl_context(self.ca_cert)
         raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         raw_sock.settimeout(15)
-        ssl_sock = ssl_ctx.wrap_socket(raw_sock, server_hostname=self.host)
+        # Đặt server_hostname=None vì check_hostname đã được tắt trong ssl_utils
+        ssl_sock = ssl_ctx.wrap_socket(raw_sock, server_hostname=None)
         ssl_sock.connect((self.host, self.port))
         return ssl_sock
 

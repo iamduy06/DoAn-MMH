@@ -48,17 +48,19 @@ def create_client_ssl_context(
 ) -> ssl.SSLContext:
     """
     SSL context phía client — dùng cert của TA làm CA để xác thực.
+    Bắt buộc verify_mode = CERT_REQUIRED để đảm bảo an toàn,
+    nhưng tắt check_hostname để hỗ trợ các kết nối qua IP ảo ZeroTier.
     """
     if not os.path.exists(ca_cert_path):
         raise FileNotFoundError(
-            f"Không tìm thấy chứng chỉ SSL '{ca_cert_path}'. "
-            "Vui lòng tạo thư mục certs/ và sao chép file 'ta_cert.pem' từ TA Server (TV1/certs/ta_cert.pem) vào đây."
+            f"Không tìm thấy chứng chỉ SSL '{ca_cert_path}'."
         )
         
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    # Sử dụng PROTOCOL_TLS để cho phép tắt check_hostname dưới chế độ CERT_REQUIRED của Python
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.load_verify_locations(cafile=ca_cert_path)
-    ctx.check_hostname = False  # self-signed không có hostname hợp lệ
-    ctx.verify_mode    = ssl.CERT_REQUIRED
+    ctx.check_hostname = False  # Bỏ qua đối chiếu IP hostname
+    ctx.verify_mode    = ssl.CERT_REQUIRED  # Bắt buộc xác thực chứng chỉ thật
     return ctx
 
