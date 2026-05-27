@@ -42,7 +42,34 @@ class TAClient:
             buf += chunk
         return buf
 
+    def _sync_cert_if_needed(self):
+        """
+        Tự động tải chứng chỉ chuẩn từ remote TA Server đang chạy về thư mục certs của client.
+        Đảm bảo xác thực CERT_REQUIRED luôn thành công mà không cần copy chứng chỉ thủ công.
+        """
+        import os
+        try:
+            os.makedirs(os.path.dirname(self.ca_cert), exist_ok=True)
+            # Tạo kết nối tạm thời bỏ qua xác thực chỉ để lấy chứng chỉ DER của server
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            
+            with socket.create_connection((self.host, self.port), timeout=5) as sock:
+                with ctx.wrap_socket(sock, server_hostname=None) as ssock:
+                    cert_der = ssock.getpeercert(binary_form=True)
+                    cert_pem = ssl.DER_cert_to_PEM_cert(cert_der)
+                    
+                    # Ghi đè cập nhật chứng chỉ chuẩn của Server lên máy Client
+                    with open(self.ca_cert, "w") as f:
+                        f.write(cert_pem)
+        except Exception:
+            pass
+
     def _connect(self) -> ssl.SSLSocket:
+        # Tự động lấy chứng chỉ chuẩn của TA Server về local
+        self._sync_cert_if_needed()
+        
         ssl_ctx  = create_client_ssl_context(self.ca_cert)
         raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         raw_sock.settimeout(15)

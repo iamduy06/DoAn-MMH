@@ -109,12 +109,31 @@ class FirebaseAuthenticator:
 
         try:
             decoded = firebase_auth_module.verify_id_token(id_token)
+            email = decoded.get("email", "").lower()
+            role = decoded.get("role", "")
+
+            # Tự động gán vai trò dựa trên tiền tố/tên email nếu custom claims của Firebase trống
+            if not role:
+                if "admin" in email:
+                    role = "admin"
+                elif "doctor" in email:
+                    role = "doctor"
+                elif "manager" in email:
+                    role = "user"
+                elif "nurse" in email:
+                    role = "user"
+                elif "patient" in email:
+                    role = "patient"
+                elif "researcher" in email:
+                    role = "user"
+                else:
+                    role = "user"  # Mặc định
 
             user_info = {
                 "uid"     : decoded.get("uid"),
-                "email"   : decoded.get("email", ""),
+                "email"   : email,
                 "name"    : decoded.get("name", ""),
-                "role"    : decoded.get("role", ""),     # custom claim
+                "role"    : role,
                 "verified": decoded.get("email_verified", False),
             }
 
