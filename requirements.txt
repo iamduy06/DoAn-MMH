@@ -1,0 +1,46 @@
+# ═══════════════════════════════════════════════════════════
+# requirements.txt — Trusted Authority (TA) Module
+# Đồ án CP-ABE EHR System
+# ═══════════════════════════════════════════════════════════
+
+# ── CP-ABE Cryptography ─────────────────────────────────
+# Charm-Crypto: thư viện pairing-based cryptography
+# Cài đặt riêng: xem hướng dẫn bên dưới (không dùng pip thường)
+# charm-crypto==0.50
+
+# ── SSL / TLS Certificate Generation ────────────────────
+cryptography>=41.0.0
+
+# ── Firebase Authentication ──────────────────────────────
+firebase-admin>=6.2.0
+
+# ── Utilities ────────────────────────────────────────────
+python-dotenv>=1.0.0       # nạp biến môi trường từ file .env
+
+# ═══════════════════════════════════════════════════════════
+# HƯỚNG DẪN CÀI ĐẶT CHARM-CRYPTO
+# ═══════════════════════════════════════════════════════════
+#
+# Charm-Crypto yêu cầu build từ source và các thư viện C:
+#
+# Ubuntu/Debian:
+#   sudo apt-get install -y \
+#       python3-dev libssl-dev libgmp-dev \
+#       flex bison libpbc-dev
+#   git clone https://github.com/JHUISI/charm.git
+#   cd charm
+#   pip install .
+#   cd ..
+#
+# macOS (Homebrew):
+#   brew install gmp pbc openssl
+#   git clone https://github.com/JHUISI/charm.git
+#   cd charm && pip install .
+#
+# Docker (khuyến nghị cho môi trường ổn định):
+#   docker pull jhuisi/charm
+#   docker run -it jhuisi/charm bash
+#
+# Kiểm tra cài đặt thành công:
+#   python3 -c "from charm.toolbox.pairinggroup import PairingGroup; print('OK')"
+# ═══════════════════════════════════════════════════════════
