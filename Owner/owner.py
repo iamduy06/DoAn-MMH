@@ -18,7 +18,8 @@ from cloud_utils import (
     upload_encrypted_key,
     download_encrypted_keys,
     download_encrypted_data,
-    upload_decrypted_column
+    upload_decrypted_column,
+    upload_mock_ehr_record
 )
 
 # ========== CONFIG ==========
@@ -81,91 +82,47 @@ def cpabe_decrypt_aes_key(pk, sk, ct_b64: str):
         raise Exception("Giải mã thất bại: không đủ thuộc tính!")
     return gt_to_aes_key(gt_msg)
 
-# -------- Menu mã hóa --------
+# -------- Menu mã hóa file EHR --------
 def menu_encrypt(pk):
     print("\n" + "="*45)
-    print("          MÃ HÓA DATABASE")
+    print("          MÃ HÓA HỒ SƠ EHR (FILE)")
     print("="*45)
 
-    table = input("  Nhập tên bảng (vd: customers): ").strip()
-    column = input("  Nhập tên cột cần mã hóa (vd: phone): ").strip()
-    policy = input("  Nhập access policy (vd: MANAGER or DOCTOR): ").strip().upper()
-
-    print(f"\n  Đang tải dữ liệu [{table}].[{column}]...")
-    rows = download_encrypted_data(table, [column])
-    if not rows:
-        print("  Không có dữ liệu!")
+    file_path = input("  Nhập đường dẫn file (vd: sample_ehr.json): ").strip()
+    if not os.path.exists(file_path):
+        print("  File không tồn tại!")
         return
+
+    record_id = input("  Nhập Record ID (để lưu trên cloud): ").strip()
+    policy = input("  Nhập access policy (vd: DOCTOR OR BREAK_GLASS): ").strip().upper()
+
+    # Đọc nội dung file
+    with open(file_path, 'rb') as f:
+        plaintext = f.read()
 
     # Sinh GT element, derive AES key, mã hóa GT bằng CP-ABE
     print(f"  Đang sinh key và mã hóa CP-ABE với policy: {policy}")
     ct_b64, aes_key = cpabe_encrypt_aes_key(pk, None, policy)
     print(f"  AES key (derived): {key_to_b64(aes_key)[:20]}...")
 
-    # Mã hóa từng row bằng AES
-    print(f"  Đang mã hóa {len(rows)} rows bằng AES-256-CBC...")
-    for row in rows:
-        row_id = row[0]
-        plaintext = str(row[1]) if row[1] is not None else ""
-        encrypted = encrypt_aes(plaintext.encode(), aes_key)
-        upload_encrypted_column(table, column, row_id, encrypted)
+    # Mã hóa dữ liệu bằng AES
+    print(f"  Đang mã hóa dữ liệu file bằng AES-256-CBC...")
+    encrypted_data = encrypt_aes(plaintext, aes_key)
+    encrypted_data_b64 = base64.b64encode(encrypted_data).decode('utf-8')
 
-    # Upload CP-ABE ciphertext kèm Public Key lên cloud để DataUser có thể tải về
+    # Upload CP-ABE ciphertext kèm Public Key lên cloud (Mock)
     pk_bytes = objectToBytes(pk, group)
     pk_b64 = base64.b64encode(pk_bytes).decode('utf-8')
-    upload_encrypted_key(f"{table}.{column}", ct_b64, policy, pk_b64)
+    
+    upload_mock_ehr_record(record_id, encrypted_data_b64, ct_b64, policy, pk_b64)
 
-    print(f"\n  HOÀN THÀNH! Cột [{column}] đã được mã hóa.")
+    print(f"\n  HOÀN THÀNH! File đã được mã hóa và lưu làm record {record_id}.")
     print(f"  Policy: {policy}")
 
-# -------- Menu giải mã --------
+# -------- Menu giải mã (Bỏ qua - User sẽ lo phần này) --------
 def menu_decrypt(pk):
-    print("\n" + "="*45)
-    print("          GIẢI MÃ / RESTORE DATABASE")
-    print("="*45)
-
-    sk_path = input("  Nhập đường dẫn file secret key: ").strip()
-    if not os.path.exists(sk_path):
-        print("  File không tồn tại!")
-        return
-
-    with open(sk_path, 'rb') as f:
-        sk = bytesToObject(f.read(), group)
-
-    # Tải danh sách keys từ cloud
-    keys_data = download_encrypted_keys()
-    if not keys_data:
-        print("  Không có key nào trên cloud!")
-        return
-
-    print(f"\n  Tìm thấy {len(keys_data)} key(s):")
-    for i, k in enumerate(keys_data):
-        print(f"  [{i+1}] {k['column_name']} | policy: {k['policy']}")
-
-    choice = int(input("\n  Chọn key (số thứ tự): ")) - 1
-    selected = keys_data[choice]
-
-    try:
-        aes_key = cpabe_decrypt_aes_key(pk, sk, selected['cp_abe'])
-        print(f"  Giải mã AES key thành công!")
-    except Exception as e:
-        print(f"  {e}")
-        return
-
-    # Giải mã từng row
-    table, column = selected['column_name'].split('.')
-    rows = download_encrypted_data(table, [column])
-    print(f"  Đang giải mã {len(rows)} rows...")
-    for row in rows:
-        row_id = row[0]
-        try:
-            plaintext = decrypt_aes(str(row[1]), aes_key).decode('utf-8')
-            upload_decrypted_column(table, column, row_id, plaintext)
-            print(f"    Row {row_id}: OK")
-        except Exception as e:
-            print(f"    Row {row_id}: FAILED - {e}")
-
-    print("\n  HOÀN THÀNH! Dữ liệu đã được restore.")
+    print("\n  Lưu ý: Data Owner thường không giải mã. Hãy dùng DataUser client để test giải mã EHR.")
+    pass
 
 # -------- Main --------
 def main():

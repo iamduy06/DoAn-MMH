@@ -205,10 +205,33 @@ class ClientHandler(threading.Thread):
             self._send_error("Danh sách attributes không được rỗng.")
             return
 
+        clean = [a.strip().upper() for a in attributes]
+
+        # ─── Xử lý Break-Glass ───
+        is_break_glass = False
+        if "BREAK_GLASS" in clean:
+            if role != "doctor" and role != "admin":
+                self._send_error("Chỉ DOCTOR mới được phép sử dụng quyền BREAK_GLASS.")
+                return
+            is_break_glass = True
+
+        # ─── Xử lý Revocation (Time-based Attributes / TTL) ───
+        # Automatically append a time attribute if the system requires short TTL
+        from datetime import datetime, timedelta
+        # Ví dụ cấp cho thuộc tính ngày hôm nay
+        today_attr = f"DATE:{datetime.utcnow().strftime('%Y-%m-%d')}"
+        if today_attr not in clean:
+            clean.append(today_attr)
+        
+        # Nếu user yêu cầu một attribute EXP (Expiration) cụ thể
+        for attr in clean:
+            if attr.startswith("EXP:"):
+                # Có thể thêm logic parse ngày và giới hạn tối đa 30 ngày TTL
+                pass
+
         try:
-            sk      = self.cpabe.keygen(attributes)
+            sk      = self.cpabe.keygen(clean)
             sk_b64  = self.cpabe.serialize_key(sk)
-            clean   = [a.strip().upper() for a in attributes]
 
             self._send_ok({
                 "sk"        : sk_b64,
@@ -216,9 +239,13 @@ class ClientHandler(threading.Thread):
                 "uid"       : uid,
             }, f"Sinh SK thành công cho {len(clean)} attributes")
 
+            detail_msg = f"attrs={clean}"
+            if is_break_glass:
+                detail_msg = f"BREAK_GLASS ACTIVATED | {detail_msg}"
+
             log_session(logger, "GET_SK", self.addr, uid=uid,
                         action="get_sk",
-                        detail=f"attrs={clean}",
+                        detail=detail_msg,
                         success=True)
 
         except ValueError as e:

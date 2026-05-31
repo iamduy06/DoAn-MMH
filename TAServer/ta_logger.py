@@ -69,6 +69,55 @@ def setup_logger(name: str = "TA_Server",
     return logger
 
 
+import hashlib
+import json
+
+class TamperEvidentLedger:
+    def __init__(self, ledger_file="logs/ledger.log"):
+        self.ledger_file = ledger_file
+        os.makedirs(os.path.dirname(ledger_file), exist_ok=True)
+        self.last_hash = self._get_last_hash()
+
+    def _get_last_hash(self) -> str:
+        if not os.path.exists(self.ledger_file):
+            return "GENESIS_HASH_0000000000000000"
+        
+        # Đọc dòng cuối cùng để lấy hash
+        try:
+            with open(self.ledger_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                if not lines:
+                    return "GENESIS_HASH_0000000000000000"
+                last_line = lines[-1].strip()
+                record = json.loads(last_line)
+                return record.get("hash", "GENESIS_HASH_0000000000000000")
+        except Exception:
+            return "GENESIS_HASH_0000000000000000"
+
+    def append_record(self, data: dict):
+        # 1. Nối chuỗi dữ liệu với prev_hash
+        data_str = json.dumps(data, sort_keys=True)
+        raw_content = f"{self.last_hash}|{data_str}".encode('utf-8')
+        
+        # 2. Tính hash mới
+        new_hash = hashlib.sha256(raw_content).hexdigest()
+        
+        # 3. Tạo record
+        record = {
+            "prev_hash": self.last_hash,
+            "data": data,
+            "hash": new_hash
+        }
+        
+        # 4. Lưu lại
+        with open(self.ledger_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(record) + "\n")
+            
+        self.last_hash = new_hash
+
+# Singleton ledger
+ledger = TamperEvidentLedger()
+
 # ──────────────────────────────────────────────────────────
 # Hàm tiện ích: ghi log phiên hoạt động có cấu trúc
 # ──────────────────────────────────────────────────────────
@@ -80,10 +129,7 @@ def log_session(logger: logging.Logger,
                 detail: str = "",
                 success: bool = True):
     """
-    Ghi một dòng log chuẩn cho một sự kiện phiên làm việc.
-
-    Ví dụ output:
-      [CONNECT ] 192.168.1.5:54321 | uid=doctor_001 | action=get_sk | attrs=['doctor','hospital_A'] | OK
+    Ghi một dòng log chuẩn cho một sự kiện phiên làm việc, kèm ghi vào Ledger.
     """
     status   = "OK" if success else "FAIL"
     ip, port = client_addr
@@ -91,7 +137,26 @@ def log_session(logger: logging.Logger,
         f"[{event:<8}] {ip}:{port} | uid={uid} | "
         f"action={action} | {detail} | {status}"
     )
-    if success:
+    
+    # Nếu là BREAK_GLASS, tô màu đỏ rực rỡ để cảnh báo
+    if "BREAK_GLASS" in detail:
+        msg = f"{BOLD}{RED}[EMERGENCY ALERT] {msg}{RESET}"
+        logger.critical(msg)
+    elif success:
         logger.info(msg)
     else:
         logger.warning(msg)
+        
+    # Ghi vào tamper-evident ledger
+    ledger_data = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "event": event,
+        "ip": ip,
+        "port": port,
+        "uid": uid,
+        "action": action,
+        "detail": detail,
+        "status": status
+    }
+    ledger.append_record(ledger_data)
+

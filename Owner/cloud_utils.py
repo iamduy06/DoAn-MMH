@@ -72,3 +72,32 @@ def upload_decrypted_column(table: str, column: str, row_id: int, plaintext_valu
     cursor.execute(query, (plaintext_value, row_id))
     conn.commit()
     conn.close()
+
+def upload_mock_ehr_record(record_id: str, encrypted_data_b64: str, cpabe_ciphertext_b64: str, policy: str, pk_b64: str):
+    """
+    Giả lập việc upload file mã hoá lên Object Storage (S3/MinIO) 
+    bằng cách lưu vào thư mục dùng chung (DataUser/data) để UserApp dễ dàng lấy về test.
+    """
+    import os
+    import json
+    
+    # Giả định DataUser/data nằm cạnh thư mục Owner
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(base_dir, "DataUser", "data")
+    os.makedirs(data_dir, exist_ok=True)
+    
+    file_path = os.path.join(data_dir, f"cloud_record_{record_id}.json")
+    
+    payload = {
+        "record_id": record_id,
+        "policy": policy,
+        "ciphertext": encrypted_data_b64,
+        "encrypted_aes_key": cpabe_ciphertext_b64,
+        "public_key": pk_b64,
+        "timestamp": "2026-05-31T00:00:00Z"
+    }
+    
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=4)
+        
+    print(f"  [MOCK CLOUD] Đã lưu mock record tại: {file_path}")

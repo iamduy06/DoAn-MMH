@@ -1,0 +1,36 @@
+{
+    "resourceType": "Patient",
+    "id": "12345",
+    "active": true,
+    "name": [
+        {
+            "use": "official",
+            "family": "Nguyen",
+            "given": [
+                "Van",
+                "A"
+            ]
+        }
+    ],
+    "gender": "male",
+    "birthDate": "1980-01-01",
+    "medical_history": [
+        {
+            "condition": "Hypertension",
+            "diagnosed_date": "2015-05-20",
+            "notes": "Patient requires daily lisinopril. Monitor blood pressure."
+        },
+        {
+            "condition": "Type 2 Diabetes",
+            "diagnosed_date": "2018-11-10",
+            "notes": "Controlled with diet and metformin."
+        }
+    ],
+    "lab_results": [
+        {
+            "test": "HbA1c",
+            "value": "6.5%",
+            "date": "2023-10-01"
+        }
+    ]
+}
