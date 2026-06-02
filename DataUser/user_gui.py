@@ -53,16 +53,12 @@ class DataUserGUI(QMainWindow):
         sk_group = QGroupBox("2. Xin Secret Key từ TA Server")
         sk_layout = QFormLayout()
         
-        self.attr_input = QLineEdit()
-        self.attr_input.setPlaceholderText("Ví dụ: DOCTOR, CARDIOLOGY (cách nhau bởi dấu phẩy)")
-        
         self.break_glass_cb = QCheckBox("Yêu cầu quyền truy cập khẩn cấp (BREAK_GLASS)")
         
-        self.get_sk_btn = QPushButton("Request Secret Key")
+        self.get_sk_btn = QPushButton("Request Secret Key (Tự động cấp quyền theo Role)")
         self.get_sk_btn.setEnabled(False)
         self.get_sk_btn.clicked.connect(self.handle_get_sk)
         
-        sk_layout.addRow("Thuộc tính của bạn:", self.attr_input)
         sk_layout.addRow("", self.break_glass_cb)
         sk_layout.addRow("", self.get_sk_btn)
         sk_group.setLayout(sk_layout)
@@ -130,18 +126,12 @@ class DataUserGUI(QMainWindow):
             QMessageBox.critical(self, "Lỗi đăng nhập", "Kiểm tra lại tài khoản Firebase.")
 
     def handle_get_sk(self):
-        raw_attrs = self.attr_input.text().strip()
-        if not raw_attrs:
-            QMessageBox.warning(self, "Lỗi", "Vui lòng nhập ít nhất một thuộc tính!")
-            return
-            
-        attrs = [a.strip() for a in raw_attrs.split(",") if a.strip()]
+        attrs = []
         
         if self.break_glass_cb.isChecked():
-            if "BREAK_GLASS" not in [a.upper() for a in attrs]:
-                attrs.append("BREAK_GLASS")
+            attrs.append("BREAK_GLASS")
                 
-        self.log(f"Đang gửi yêu cầu xin SK tới TA Server với attributes: {attrs} ...")
+        self.log(f"Đang gửi yêu cầu xin SK tới TA Server (Attributes: {attrs if attrs else 'Tự động cấp theo Role'})...")
         QApplication.processEvents()
         
         try:
@@ -150,9 +140,10 @@ class DataUserGUI(QMainWindow):
             
             if resp.get("status") == "ok":
                 self.sk_b64 = resp["data"]["sk"]
+                returned_attrs = resp.get("data", {}).get("attributes", [])
                 with open(Config.SK_FILE, "w") as f:
                     f.write(self.sk_b64)
-                self.log_success("✓ Nhận và lưu Secret Key thành công!")
+                self.log_success(f"✓ Nhận SK thành công! Thuộc tính được cấp: {returned_attrs}")
                 self.decrypt_btn.setEnabled(True)
             else:
                 self.log_error(f"✗ TA Server từ chối: {resp.get('message')}")
@@ -208,17 +199,36 @@ class DataUserGUI(QMainWindow):
             
             self.log_success("✓ Giải mã Dữ liệu thành công!\n")
             
-            # Format JSON for display if possible
+            # Giải mã JSON data từ plaintext
             try:
-                json_data = json.loads(plaintext.decode('utf-8'))
-                formatted = json.dumps(json_data, indent=4, ensure_ascii=False)
-                self.res_output.append("<hr>")
-                self.res_output.append(f"<pre>{formatted}</pre>")
-                self.res_output.append("<hr>")
-            except:
-                self.res_output.append("<hr>")
-                self.res_output.append(plaintext.decode('utf-8'))
-                self.res_output.append("<hr>")
+                plaintext_str = plaintext.decode("utf-8")
+                record_json = json.loads(plaintext_str)
+                patient_name = record_json.get("patient_name", "N/A")
+                phone = record_json.get("phone", "N/A")
+                prescription = record_json.get("prescription", "N/A")
+                diagnosis = record_json.get("diagnosis", "N/A")
+            except Exception:
+                patient_name = "N/A"
+                phone = "N/A"
+                prescription = "N/A"
+                try:
+                    diagnosis = plaintext.decode("utf-8")
+                except:
+                    diagnosis = str(plaintext)
+
+            full_report = (
+                f"===========================================================\n"
+                f"    THÔNG TIN BỆNH ÁN BỆNH NHÂN (ĐÃ GIẢI MÃ THÀNH CÔNG)\n"
+                f"===========================================================\n"
+                f"• ID Bản ghi    : {record_id}\n"
+                f"• Tên bệnh nhân : {patient_name}\n"
+                f"• Số điện thoại : {phone}\n"
+                f"• Thuốc điều trị: {prescription}\n"
+                f"• Chẩn đoán     : {diagnosis}\n"
+                f"==========================================================="
+            )
+
+            self.res_output.append(f"<pre>{full_report}</pre>")
                 
             QMessageBox.information(self, "Thành công", "Đã giải mã thành công hồ sơ y tế!")
             

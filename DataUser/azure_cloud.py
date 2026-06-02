@@ -36,18 +36,17 @@ class AzureCloud:
                 conn = pyodbc.connect(conn_str)
                 cursor = conn.cursor()
                 
-                table = "records"
-                column = "ciphertext"
-                column_name = f"{table}.{column}"
+                table = "ehr_records"
                 
                 query = f"""
-                    SELECT r.[{column}], k.[cp_abe], k.[public_key]
-                    FROM [{table}] r
-                    CROSS JOIN [manage_key] k
-                    WHERE r.[id] = ? AND k.[column_name] = ?
+                    SELECT [ciphertext], [encrypted_aes_key], [public_key]
+                    FROM [{table}]
+                    WHERE [record_id] = ?
                 """
-                cursor.execute(query, (record_id, column_name))
+                cursor.execute(query, (str(record_id),))
                 row = cursor.fetchone()
+                
+                conn.close()
                 
                 if row:
                     logger.info("✓ Tải dữ liệu thành công từ Azure SQL Database thực tế (pyodbc).")
@@ -72,19 +71,18 @@ class AzureCloud:
                     )
                     cursor = conn.cursor()
                     
-                    table = "records"
-                    column = "ciphertext"
-                    column_name = f"{table}.{column}"
+                    table = "ehr_records"
                     
                     # pymssql sử dụng %s làm placeholder thay cho ?
                     query = f"""
-                        SELECT r.[{column}], k.[cp_abe], k.[public_key]
-                        FROM [{table}] r
-                        CROSS JOIN [manage_key] k
-                        WHERE r.[id] = %s AND k.[column_name] = %s
+                        SELECT [ciphertext], [encrypted_aes_key], [public_key]
+                        FROM [{table}]
+                        WHERE [record_id] = %s
                     """
-                    cursor.execute(query, (str(record_id), column_name))
+                    cursor.execute(query, (str(record_id),))
                     row = cursor.fetchone()
+                    
+                    conn.close()
                     
                     if row:
                         logger.info("✓ Tải dữ liệu thành công từ Azure SQL Database thực tế (pymssql).")
@@ -111,7 +109,7 @@ class AzureCloud:
             logger.info(f"Vui lòng tạo file test: {mock_file} chứa 'encrypted_aes_key', 'ciphertext' và 'public_key' (base64).")
             return None
             
-        with open(mock_file, "r") as f:
+        with open(mock_file, "r", encoding="utf-8") as f:
             data = json.load(f)
             
         logger.info(f"✓ Tải thành công dữ liệu mã hoá giả lập từ local.")

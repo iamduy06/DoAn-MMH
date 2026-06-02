@@ -193,7 +193,7 @@ class ClientHandler(threading.Thread):
         """
         # Kiểm tra quyền (Owner không được lấy SK của người khác)
         role = user_info.get("role", "").lower()
-        if role not in ("user", "patient", "doctor", "admin", "developer"):
+        if role not in ("user", "patient", "doctor", "admin", "developer", "manager", "nurse", "researcher"):
             log_session(logger, "GET_SK", self.addr, uid=uid,
                         action="get_sk",
                         detail=f"Từ chối — role={role}",
@@ -201,9 +201,23 @@ class ClientHandler(threading.Thread):
             self._send_error(f"Role '{role}' không được phép lấy SK.")
             return
 
+        # Tự động gán thuộc tính nghiệp vụ nếu DataUser (Client) không truyền lên
         if not attributes:
-            self._send_error("Danh sách attributes không được rỗng.")
-            return
+            if role == "doctor":
+                attributes = ["DOCTOR", "HOSPITAL_A"]
+            elif role == "manager":
+                attributes = ["MANAGER"]
+            elif role == "nurse":
+                attributes = ["NURSE", "HOSPITAL_A"]
+            elif role == "researcher":
+                attributes = ["RESEARCHER", "UNIV_A"]
+            elif role == "patient":
+                attributes = ["PATIENT", "PATIENT_001"]
+            elif role == "admin":
+                attributes = ["ADMIN"]
+            else:
+                self._send_error("Không thể tự động cấp thuộc tính cho vai trò này. Vui lòng kiểm tra lại cấu hình tài khoản.")
+                return
 
         clean = [a.strip().upper() for a in attributes]
 

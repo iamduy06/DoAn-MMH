@@ -119,13 +119,13 @@ class FirebaseAuthenticator:
                 elif "doctor" in email:
                     role = "doctor"
                 elif "manager" in email:
-                    role = "user"
+                    role = "manager"
                 elif "nurse" in email:
-                    role = "user"
+                    role = "nurse"
                 elif "patient" in email:
                     role = "patient"
                 elif "researcher" in email:
-                    role = "user"
+                    role = "researcher"
                 else:
                     role = "user"  # Mặc định
 

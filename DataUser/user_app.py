@@ -119,7 +119,7 @@ def step_3_and_4_decrypt(sk_b64: str, cloud_data: dict) -> bytes:
 
 def main():
     parser = argparse.ArgumentParser(description="Data User App - Đồ án CP-ABE EHR")
-    parser.add_argument("--attrs", nargs="+", required=True, help="Danh sách attributes (VD: DOCTOR HOSPITAL_A)")
+    parser.add_argument("--attrs", nargs="*", default=[], help="Danh sách attributes (tùy chọn, để trống sẽ được cấp tự động theo role)")
     parser.add_argument("--record", required=True, help="ID của bản ghi y tế cần tải")
     parser.add_argument("--email", help="Email đăng nhập Firebase Auth")
     parser.add_argument("--password", help="Mật khẩu đăng nhập Firebase Auth")
@@ -142,24 +142,45 @@ def main():
     # 3 & 4. Giải mã CP-ABE và AES
     plaintext = step_3_and_4_decrypt(sk_b64, cloud_data)
     
+    # Giải mã JSON data từ plaintext
+    try:
+        import json
+        plaintext_str = plaintext.decode("utf-8")
+        record_json = json.loads(plaintext_str)
+        patient_name = record_json.get("patient_name", "N/A")
+        phone = record_json.get("phone", "N/A")
+        prescription = record_json.get("prescription", "N/A")
+        diagnosis = record_json.get("diagnosis", "N/A")
+    except Exception:
+        # Nếu không phải định dạng JSON (phiên bản cũ)
+        patient_name = "N/A"
+        phone = "N/A"
+        prescription = "N/A"
+        try:
+            diagnosis = plaintext.decode("utf-8")
+        except:
+            diagnosis = str(plaintext)
+
+    full_report = (
+        f"===========================================================\n"
+        f"    THÔNG TIN BỆNH ÁN BỆNH NHÂN (ĐÃ GIẢI MÃ THÀNH CÔNG)\n"
+        f"===========================================================\n"
+        f"• ID Bản ghi    : {args.record}\n"
+        f"• Tên bệnh nhân : {patient_name}\n"
+        f"• Số điện thoại : {phone}\n"
+        f"• Thuốc điều trị: {prescription}\n"
+        f"• Chẩn đoán     : {diagnosis}\n"
+        f"==========================================================="
+    )
+    
     # 5. Xuất file kết quả
     output_file = os.path.join(Config.DATA_DIR, f"decrypted_record_{args.record}.txt")
     with open(output_file, "w", encoding="utf-8") as f:
-        try:
-            f.write(plaintext.decode("utf-8"))
-        except:
-            f.write(str(plaintext))
+        f.write(full_report)
             
     logger.info(f"✓ Đã xuất dữ liệu y tế giải mã thành công ra file: {output_file}")
     
-    print("\n" + "="*50)
-    print("DỮ LIỆU BỆNH ÁN GỐC GIẢI MÃ:")
-    print("="*50)
-    try:
-        print(plaintext.decode("utf-8"))
-    except:
-        print(plaintext)
-    print("="*50 + "\n")
+    print("\n" + full_report + "\n")
 
 if __name__ == "__main__":
     main()
