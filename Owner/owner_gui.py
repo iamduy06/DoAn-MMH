@@ -14,7 +14,7 @@ from charm.core.engine.util import bytesToObject, objectToBytes
 from owner import cpabe_encrypt_aes_key
 from aes_utils import encrypt_aes, key_to_b64
 from firebase_utils import login
-from cloud_utils import upload_mock_ehr_record
+from cloud_utils import upload_ehr_record
 from ta_client import get_public_key
 
 class DataOwnerGUI(QMainWindow):
@@ -170,7 +170,7 @@ class DataOwnerGUI(QMainWindow):
             pk_b64 = base64.b64encode(pk_bytes).decode('utf-8')
 
             # Gọi cloud_utils lưu local
-            upload_mock_ehr_record(record_id, encrypted_data_b64, ct_b64, policy, pk_b64)
+            upload_ehr_record(record_id, encrypted_data_b64, ct_b64, policy, pk_b64)
 
             self.log(f"✓ HOÀN THÀNH! File đã được mã hóa và lưu làm record {record_id}.")
             QMessageBox.information(self, "Thành công", f"Đã mã hoá và lưu record {record_id}!")

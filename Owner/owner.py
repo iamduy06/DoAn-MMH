@@ -14,12 +14,9 @@ from charm.core.engine.util import objectToBytes, bytesToObject
 from aes_utils import encrypt_aes, decrypt_aes, key_to_b64, b64_to_key
 from firebase_utils import login
 from cloud_utils import (
-    upload_encrypted_column,
-    upload_encrypted_key,
-    download_encrypted_keys,
-    download_encrypted_data,
-    upload_decrypted_column,
-    upload_mock_ehr_record
+    upload_ehr_record,
+    download_ehr_record,
+    list_ehr_records
 )
 
 # ========== CONFIG ==========
