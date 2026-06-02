@@ -1,7 +1,7 @@
 import pyodbc
 import base64
 
-CONNECTION_STRING = "Driver={ODBC Driver 18 for SQL Server};Server=tcp:cpabe-ehr-server.database.windows.net,1433;Database=cpabe-ehr-db;Uid=cpabeadmin;Pwd=linhquang206!;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
+CONNECTION_STRING = "Driver={ODBC Driver 18 for SQL Server};Server=tcp:cpabe-ehr-server.database.windows.net,1433;Database=cpabe-ehr-db;Uid=cpabeadmin;Pwd=linhquang206!;Encrypt=yes;TrustServerCertificate=yes;Connection Timeout=60;"
 
 def get_connection():
     try:

@@ -104,14 +104,13 @@ def menu_encrypt(pk):
 
     # Mã hóa dữ liệu bằng AES
     print(f"  Đang mã hóa dữ liệu file bằng AES-256-CBC...")
-    encrypted_data = encrypt_aes(plaintext, aes_key)
-    encrypted_data_b64 = base64.b64encode(encrypted_data).decode('utf-8')
+    encrypted_data_b64 = encrypt_aes(plaintext, aes_key)
 
     # Upload CP-ABE ciphertext kèm Public Key lên cloud (Mock)
     pk_bytes = objectToBytes(pk, group)
     pk_b64 = base64.b64encode(pk_bytes).decode('utf-8')
     
-    upload_mock_ehr_record(record_id, encrypted_data_b64, ct_b64, policy, pk_b64)
+    upload_ehr_record(record_id, encrypted_data_b64, ct_b64, policy, pk_b64)
 
     print(f"\n  HOÀN THÀNH! File đã được mã hóa và lưu làm record {record_id}.")
     print(f"  Policy: {policy}")
