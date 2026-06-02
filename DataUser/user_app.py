@@ -146,13 +146,30 @@ def main():
     try:
         import json
         plaintext_str = plaintext.decode("utf-8")
+        logger.info(f"Raw Decrypted Data: {plaintext_str}")
         record_json = json.loads(plaintext_str)
-        patient_name = record_json.get("patient_name", "N/A")
-        phone = record_json.get("phone", "N/A")
-        prescription = record_json.get("prescription", "N/A")
-        diagnosis = record_json.get("diagnosis", "N/A")
-    except Exception:
-        # Nếu không phải định dạng JSON (phiên bản cũ)
+        if "resourceType" in record_json:
+            # Định dạng FHIR phức tạp
+            name_obj = record_json.get("name", [{}])[0]
+            family = name_obj.get("family", "")
+            given = " ".join(name_obj.get("given", []))
+            patient_name = f"{family} {given}".strip() or "N/A"
+            
+            history = record_json.get("medical_history", [])
+            diagnosis_list = [item.get("condition", "") for item in history]
+            diagnosis = ", ".join(filter(None, diagnosis_list)) or "N/A"
+            
+            notes_list = [item.get("notes", "") for item in history]
+            prescription = " | ".join(filter(None, notes_list)) or "N/A"
+            phone = record_json.get("phone", "N/A")
+        else:
+            # Định dạng chuẩn (phẳng)
+            patient_name = record_json.get("patient_name", "N/A")
+            phone = record_json.get("phone", "N/A")
+            prescription = record_json.get("prescription", "N/A")
+            diagnosis = record_json.get("diagnosis", "N/A")
+    except Exception as e:
+        logger.warning(f"Dữ liệu không phải là JSON chuẩn. Lỗi: {e}")
         patient_name = "N/A"
         phone = "N/A"
         prescription = "N/A"

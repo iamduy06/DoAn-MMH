@@ -57,8 +57,10 @@ class AzureCloud:
                     }
                 else:
                     logger.warning(f"Không tìm thấy bản ghi {record_id} trên Azure SQL.")
-            except ImportError:
-                # 2. Khắc phục thông minh: Fallback sang pymssql (Thư viện Python thuần không cần ODBC Driver)
+            except Exception as e_odbc:
+                logger.warning(f"Lỗi kết nối Azure SQL qua pyodbc: {e_odbc}")
+                logger.info("⚡ Đang thử chuyển sang phương án kết nối online trực tiếp dùng 'pymssql'...")
+                
                 try:
                     import pymssql
                     logger.info(f"Đang kết nối Azure SQL Database dùng pymssql: {Config.AZURE_SERVER}...")
@@ -93,15 +95,17 @@ class AzureCloud:
                         }
                     else:
                         logger.warning(f"Không tìm thấy bản ghi {record_id} trên Azure SQL (pymssql).")
+                        return None
                 except ImportError:
                     logger.warning("Cảnh báo: Không tìm thấy cả hai thư viện kết nối Database 'pyodbc' và 'pymssql'.")
+                    return None
                 except Exception as e_mssql:
                     logger.warning(f"Lỗi kết nối Azure SQL qua pymssql: {e_mssql}")
-            except Exception as e_odbc:
-                logger.warning(f"Lỗi kết nối Azure SQL qua pyodbc: {e_odbc}")
+                    return None
 
-        # Chế độ Fallback offline
-        logger.info(f"Chạy chế độ offline: Đọc bản ghi ID={record_id} từ thư mục data cục bộ...")
+        # Chế độ Fallback offline (Chỉ chạy khi tham số offline=True)
+        if offline:
+            logger.info(f"Chạy chế độ offline: Đọc bản ghi ID={record_id} từ thư mục data cục bộ...")
         mock_file = os.path.join(Config.DATA_DIR, f"cloud_record_{record_id}.json")
         
         if not os.path.exists(mock_file):

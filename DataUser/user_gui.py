@@ -167,10 +167,10 @@ class DataUserGUI(QMainWindow):
                 QMessageBox.warning(self, "Lỗi", "Bạn chưa có Secret Key! Hãy request trước.")
                 return
 
-        self.log(f"Đang tải hồ sơ {record_id} từ Cloud (Mock)...")
+        self.log(f"Đang tải hồ sơ {record_id} từ Cloud (Azure SQL)...")
         QApplication.processEvents()
         
-        cloud_data = AzureCloud.download_data(record_id, offline=True)
+        cloud_data = AzureCloud.download_data(record_id, offline=False)
         if not cloud_data:
             self.log_error("✗ Không tìm thấy dữ liệu trên Cloud!")
             return
@@ -202,12 +202,30 @@ class DataUserGUI(QMainWindow):
             # Giải mã JSON data từ plaintext
             try:
                 plaintext_str = plaintext.decode("utf-8")
+                self.log(f"Raw Decrypted Data: {plaintext_str}")
                 record_json = json.loads(plaintext_str)
-                patient_name = record_json.get("patient_name", "N/A")
-                phone = record_json.get("phone", "N/A")
-                prescription = record_json.get("prescription", "N/A")
-                diagnosis = record_json.get("diagnosis", "N/A")
-            except Exception:
+                if "resourceType" in record_json:
+                    # Định dạng FHIR phức tạp
+                    name_obj = record_json.get("name", [{}])[0]
+                    family = name_obj.get("family", "")
+                    given = " ".join(name_obj.get("given", []))
+                    patient_name = f"{family} {given}".strip() or "N/A"
+                    
+                    history = record_json.get("medical_history", [])
+                    diagnosis_list = [item.get("condition", "") for item in history]
+                    diagnosis = ", ".join(filter(None, diagnosis_list)) or "N/A"
+                    
+                    notes_list = [item.get("notes", "") for item in history]
+                    prescription = " | ".join(filter(None, notes_list)) or "N/A"
+                    phone = record_json.get("phone", "N/A")
+                else:
+                    # Định dạng chuẩn (phẳng)
+                    patient_name = record_json.get("patient_name", "N/A")
+                    phone = record_json.get("phone", "N/A")
+                    prescription = record_json.get("prescription", "N/A")
+                    diagnosis = record_json.get("diagnosis", "N/A")
+            except Exception as e:
+                self.log_error(f"Cảnh báo: Dữ liệu không phải là JSON chuẩn. Lỗi: {e}")
                 patient_name = "N/A"
                 phone = "N/A"
                 prescription = "N/A"
